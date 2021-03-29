@@ -9,21 +9,10 @@ use rocket::{
 };
 use tokio_util::compat::TokioAsyncReadCompatExt;
 
-/// A batch request which can be extracted from a request's body.
-///
-/// # Examples
-///
-/// ```ignore
-/// #[rocket::post("/graphql", data = "<request>", format = "application/json", rank = 1)]
-/// async fn graphql_request(schema: State<'_, ExampleSchema>, request: BatchRequest) -> Response {
-///     request.execute(&schema).await
-/// }
-/// ```
 #[derive(Debug)]
 pub struct BatchRequest(pub async_graphql::BatchRequest);
 
 impl BatchRequest {
-    /// Shortcut method to execute the request on the schema.
     pub async fn execute<Query, Mutation, Subscription>(
         self,
         schema: &Schema<Query, Mutation, Subscription>,
@@ -69,68 +58,6 @@ impl<'r> FromData<'r> for BatchRequest {
     }
 }
 
-/// A GraphQL request which can be extracted from a query string or the request's body.
-///
-/// # Examples
-///
-/// ```ignore
-/// #[rocket::post("/graphql?<query..>", rank = 2)]
-/// async fn graphql_query(schema: State<'_, ExampleSchema>, query: Request) -> Result<Response, Status> {
-///     query.execute(&schema).await
-/// }
-///
-/// #[rocket::post("/graphql", data = "<request>", format = "application/json", rank = 1)]
-/// async fn graphql_request(schema: State<'_, ExampleSchema>, request: Request) -> Result<Response, Status> {
-///     request.execute(&schema).await
-/// }
-/// ```
-#[derive(Debug)]
-pub struct Request(pub async_graphql::Request);
-
-impl Request {
-    /// Shortcut method to execute the request on the schema.
-    pub async fn execute<Query, Mutation, Subscription>(
-        self,
-        schema: &Schema<Query, Mutation, Subscription>,
-    ) -> Response
-    where
-        Query: ObjectType + 'static,
-        Mutation: ObjectType + 'static,
-        Subscription: SubscriptionType + 'static,
-    {
-        Response(schema.execute(self.0).await.into())
-    }
-}
-
-// impl<'q> FromQuery<'q> for Request {
-//     type Error = serde::de::value::Error;
-
-//     fn from_query(query: request::Query<'_>) -> Result<Self, Self::Error> {
-//         Ok(Self(async_graphql::Request::deserialize(
-//             QueryDeserializer(query),
-//         )?))
-//     }
-// }
-
-#[rocket::async_trait]
-impl<'r> FromData<'r> for Request {
-    type Error = ParseRequestError;
-
-    async fn from_data(req: &'r rocket::Request<'_>, data: Data) -> data::Outcome<Self, Self::Error> {
-        BatchRequest::from_data(req, data)
-            .await
-            .and_then(|request| match request.0.into_single() {
-                Ok(single) => data::Outcome::Success(Self(single)),
-                Err(e) => data::Outcome::Failure((Status::BadRequest, e)),
-            })
-    }
-}
-
-/// Wrapper around `async-graphql::Response` that is a Rocket responder so it can be returned from
-/// a routing function in Rocket.
-///
-/// It contains a `BatchResponse` but since a response is a type of batch response it works for
-/// both.
 #[derive(Debug)]
 pub struct Response(pub async_graphql::BatchResponse);
 
