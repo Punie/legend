@@ -1,4 +1,5 @@
 use async_graphql::{
+    extensions::Tracing,
     http::{playground_source, GraphQLPlaygroundConfig},
     Context, EmptySubscription, Object, Schema,
 };
@@ -8,7 +9,8 @@ use rocket::{
         content::Html,
         status::{Created, NoContent},
     },
-    trace, State,
+    trace::{self, Instrument},
+    State,
 };
 use rocket_contrib::json::Json;
 
@@ -54,7 +56,12 @@ impl MutationRoot {
         Ok(post)
     }
 
-    async fn update_post(&self, ctx: &Context<'_>, id: i32, post: PostUpdate) -> async_graphql::Result<Option<Post>> {
+    async fn update_post(
+        &self,
+        ctx: &Context<'_>,
+        id: i32,
+        post: PostUpdate,
+    ) -> async_graphql::Result<Option<Post>> {
         let conn = ctx.data::<LegendDbSqlx>()?;
         let post = Post::update_sqlx(id, post, conn).await.unwrap();
 
@@ -82,7 +89,8 @@ fn graphql_playground() -> Html<String> {
 #[post("/", data = "<request>", format = "application/json")]
 async fn graphql_request(schema: State<'_, LegendSchema>, request: BatchRequest) -> Response {
     trace::debug!(?request);
-    request.execute(&schema).await
+    let root_span = trace::info_span!("GraphQL request");
+    request.execute(&schema).instrument(root_span).await
 }
 
 #[get("/hello")]
@@ -184,6 +192,8 @@ pub fn rocket() -> rocket::Rocket {
         .attach(AdHoc::on_attach(
             "graphql schema",
             move |rocket| async move {
+                use rocket::tokio::{fs::File, io::AsyncWriteExt};
+
                 let pool = match rocket.state::<LegendDbSqlx>() {
                     Some(pool) => pool.clone(),
                     None => {
@@ -193,8 +203,12 @@ pub fn rocket() -> rocket::Rocket {
                 };
 
                 let schema = Schema::build(QueryRoot, MutationRoot, EmptySubscription)
+                    .extension(Tracing::default())
                     .data(pool)
                     .finish();
+
+                let mut file = File::create("schema.graphql").await.unwrap();
+                file.write_all(schema.sdl().as_bytes()).await.unwrap();
 
                 Ok(rocket.manage(schema))
             },

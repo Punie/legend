@@ -82,6 +82,7 @@ dependencies = [
  "static_assertions",
  "tempfile",
  "thiserror",
+ "tracing",
 ]
 
 [[package]]

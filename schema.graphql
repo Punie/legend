@@ -1,0 +1,29 @@
+type QueryRoot {
+	hello(name: String!): String!
+	posts: [Post!]!
+	post(id: Int!): Post
+}
+type Post {
+	id: Int!
+	title: String!
+	body: String!
+	published: Boolean!
+}
+type MutationRoot {
+	createPost(post: NewPost!): Post!
+	updatePost(id: Int!, post: PostUpdate!): Post
+	deletePost(id: Int!): Boolean!
+}
+input NewPost {
+	title: String!
+	body: String!
+}
+input PostUpdate {
+	title: String
+	body: String
+	published: Boolean
+}
+schema {
+	query: QueryRoot
+	mutation: MutationRoot
+}
