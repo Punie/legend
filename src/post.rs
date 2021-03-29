@@ -1,3 +1,4 @@
+use async_graphql::{InputObject, SimpleObject};
 use diesel::{prelude::*, result::Error};
 use rocket::trace;
 use serde::{Deserialize, Serialize};
@@ -9,34 +10,30 @@ use crate::{
     debug_query,
 };
 
-#[derive(Queryable, Identifiable, FromRow, Serialize, Clone, Debug)]
+#[derive(SimpleObject, Queryable, Identifiable, FromRow, Serialize, Clone, Debug)]
 pub struct Post {
-    id: i32,
-    title: String,
-    body: String,
-    published: bool,
+    pub id: i32,
+    pub title: String,
+    pub body: String,
+    pub published: bool,
 }
 
-#[derive(Insertable, Deserialize, Clone, Debug)]
+#[derive(InputObject, Insertable, Deserialize, Clone, Debug)]
 #[table_name = "posts"]
 pub struct NewPost {
-    title: String,
-    body: String,
+    pub title: String,
+    pub body: String,
 }
 
-#[derive(AsChangeset, Deserialize, Clone, Debug)]
+#[derive(InputObject, AsChangeset, Deserialize, Clone, Debug)]
 #[table_name = "posts"]
 pub struct PostUpdate {
-    title: Option<String>,
-    body: Option<String>,
-    published: Option<bool>,
+    pub title: Option<String>,
+    pub body: Option<String>,
+    pub published: Option<bool>,
 }
 
 impl Post {
-    pub fn id(&self) -> i32 {
-        self.id
-    }
-
     #[trace::instrument(name = "Post::all", level = "info", skip(conn))]
     pub async fn all(conn: &LegendDb) -> QueryResult<Vec<Post>> {
         let query = posts::table.filter(posts::published).order(posts::id);

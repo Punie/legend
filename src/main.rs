@@ -9,6 +9,7 @@ use color_eyre::eyre::WrapErr;
 
 mod api;
 mod db;
+mod gql;
 mod post;
 mod schema;
 mod utils;
