@@ -73,14 +73,14 @@ impl QueryRoot {
 
     async fn posts(&self, ctx: &Context<'_>) -> async_graphql::Result<Vec<Post>> {
         let conn = ctx.data::<LegendDb>()?;
-        let posts = Post::all(conn).await.unwrap();
+        let posts = Post::all(conn).await?;
 
         Ok(posts)
     }
 
     async fn post(&self, ctx: &Context<'_>, id: i32) -> async_graphql::Result<Option<Post>> {
         let conn = ctx.data::<LegendDb>()?;
-        let post = Post::find_by_id(id, conn).await.unwrap();
+        let post = Post::find_by_id(id, conn).await?;
 
         Ok(post)
     }
@@ -92,7 +92,7 @@ pub struct MutationRoot;
 impl MutationRoot {
     async fn create_post(&self, ctx: &Context<'_>, post: NewPost) -> async_graphql::Result<Post> {
         let conn = ctx.data::<LegendDb>()?;
-        let post = Post::create(post, conn).await.unwrap();
+        let post = Post::create(post, conn).await?;
 
         Ok(post)
     }
@@ -104,14 +104,14 @@ impl MutationRoot {
         post: PostUpdate,
     ) -> async_graphql::Result<Option<Post>> {
         let conn = ctx.data::<LegendDb>()?;
-        let post = Post::update(id, post, conn).await.unwrap();
+        let post = Post::update(id, post, conn).await?;
 
         Ok(post)
     }
 
     async fn delete_post(&self, ctx: &Context<'_>, id: i32) -> async_graphql::Result<bool> {
         let conn = ctx.data::<LegendDb>()?;
-        let res = Post::delete(id, conn).await.unwrap();
+        let res = Post::delete(id, conn).await?;
 
         Ok(res)
     }

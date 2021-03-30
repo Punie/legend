@@ -4,28 +4,29 @@ use rocket_contrib::json::Json;
 use crate::{
     database::LegendDb,
     models::post::{NewPost, Post, PostUpdate},
+    Result,
 };
 
 #[get("/posts")]
-pub async fn list_posts(conn: LegendDb) -> Json<Vec<Post>> {
-    let posts = Post::all(&conn).await.unwrap();
+pub async fn list_posts(conn: LegendDb) -> Result<Json<Vec<Post>>> {
+    let posts = Post::all(&conn).await?;
 
-    Json(posts)
+    Ok(Json(posts))
 }
 
 #[get("/posts/<id>")]
-pub async fn get_post(id: i32, conn: LegendDb) -> Option<Json<Post>> {
-    let post = Post::find_by_id(id, &conn).await.unwrap();
+pub async fn get_post(id: i32, conn: LegendDb) -> Result<Option<Json<Post>>> {
+    let post = Post::find_by_id(id, &conn).await?;
 
-    post.map(Json)
+    Ok(post.map(Json))
 }
 
 #[post("/posts", format = "json", data = "<new_post>")]
-pub async fn create_post(new_post: Json<NewPost>, conn: LegendDb) -> Created<Json<Post>> {
-    let result = Post::create(new_post.into_inner(), &conn).await.unwrap();
+pub async fn create_post(new_post: Json<NewPost>, conn: LegendDb) -> Result<Created<Json<Post>>> {
+    let result = Post::create(new_post.into_inner(), &conn).await?;
     let location = uri!("/api", get_post: id = result.id).to_string();
 
-    Created::new(location).body(Json(result))
+    Ok(Created::new(location).body(Json(result)))
 }
 
 #[put("/posts/<id>", format = "json", data = "<post_update>")]
@@ -33,17 +34,15 @@ pub async fn update_post(
     id: i32,
     post_update: Json<PostUpdate>,
     conn: LegendDb,
-) -> Option<Json<Post>> {
-    let result = Post::update(id, post_update.into_inner(), &conn)
-        .await
-        .unwrap();
+) -> Result<Option<Json<Post>>> {
+    let result = Post::update(id, post_update.into_inner(), &conn).await?;
 
-    result.map(Json)
+    Ok(result.map(Json))
 }
 
 #[delete("/posts/<id>")]
-pub async fn delete_post(id: i32, conn: LegendDb) -> Option<NoContent> {
-    let result = Post::delete(id, &conn).await.unwrap();
+pub async fn delete_post(id: i32, conn: LegendDb) -> Result<Option<NoContent>> {
+    let result = Post::delete(id, &conn).await?;
 
-    result.then(|| NoContent)
+    Ok(result.then(|| NoContent))
 }
