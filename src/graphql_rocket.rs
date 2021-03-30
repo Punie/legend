@@ -4,10 +4,35 @@ use async_graphql::http::MultipartOptions;
 use async_graphql::{ObjectType, ParseRequestError, Schema, SubscriptionType};
 use rocket::{
     data::{self, Data, FromData, ToByteUnit},
+    form::FromForm,
     http::{ContentType, Header, Status},
     response::{self, Responder},
 };
+
 use tokio_util::compat::TokioAsyncReadCompatExt;
+
+#[derive(FromForm, Debug)]
+pub struct Query {
+    query: String,
+    #[field(name = "operationName")]
+    operation_name: Option<String>,
+    variables: Option<String>,
+}
+
+impl Query {
+    pub async fn execute<Query, Mutation, Subscription>(
+        self,
+        schema: &Schema<Query, Mutation, Subscription>,
+    ) -> Response
+    where
+        Query: ObjectType + 'static,
+        Mutation: ObjectType + 'static,
+        Subscription: SubscriptionType + 'static,
+    {
+        let request: Request = self.into();
+        request.execute(schema).await
+    }
+}
 
 #[derive(Debug)]
 pub struct BatchRequest(pub async_graphql::BatchRequest);
@@ -30,7 +55,10 @@ impl BatchRequest {
 impl<'r> FromData<'r> for BatchRequest {
     type Error = ParseRequestError;
 
-    async fn from_data(req: &'r rocket::Request<'_>, data: Data) -> data::Outcome<Self, Self::Error> {
+    async fn from_data(
+        req: &'r rocket::Request<'_>,
+        data: Data,
+    ) -> data::Outcome<Self, Self::Error> {
         let opts: MultipartOptions = req.managed_state().copied().unwrap_or_default();
 
         let request = async_graphql::http::receive_batch_body(
@@ -55,6 +83,59 @@ impl<'r> FromData<'r> for BatchRequest {
                 e,
             )),
         }
+    }
+}
+
+#[derive(Debug)]
+pub struct Request(pub async_graphql::Request);
+
+impl Request {
+    pub async fn execute<Query, Mutation, Subscription>(
+        self,
+        schema: &Schema<Query, Mutation, Subscription>,
+    ) -> Response
+    where
+        Query: ObjectType + 'static,
+        Mutation: ObjectType + 'static,
+        Subscription: SubscriptionType + 'static,
+    {
+        Response(schema.execute(self.0).await.into())
+    }
+}
+
+impl From<Query> for Request {
+    fn from(query: Query) -> Self {
+        let mut request = async_graphql::Request::new(query.query);
+
+        if let Some(operation_name) = query.operation_name {
+            request = request.operation_name(operation_name);
+        }
+
+        if let Some(variables) = query.variables {
+            let value = serde_json::from_str(&variables).unwrap_or_default();
+            let variables = async_graphql::Variables::from_json(value);
+
+            request = request.variables(variables);
+        }
+
+        Request(request)
+    }
+}
+
+#[rocket::async_trait]
+impl<'r> FromData<'r> for Request {
+    type Error = ParseRequestError;
+
+    async fn from_data(
+        req: &'r rocket::Request<'_>,
+        data: Data,
+    ) -> data::Outcome<Self, Self::Error> {
+        BatchRequest::from_data(req, data)
+            .await
+            .and_then(|request| match request.0.into_single() {
+                Ok(single) => data::Outcome::Success(Self(single)),
+                Err(e) => data::Outcome::Failure((Status::BadRequest, e)),
+            })
     }
 }
 

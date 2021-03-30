@@ -1,0 +1,169 @@
+{
+  "db": "PostgreSQL",
+  "62c3d8c459599ef0488ec6e6aec442c2178c834b3ac01cd4c508f07f3f0bb23a": {
+    "query": "UPDATE posts SET (title, body, published) = (COALESCE($1, title), COALESCE($2, body), COALESCE($3, published)) WHERE id = $4 RETURNING *",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "title",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 2,
+          "name": "body",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 3,
+          "name": "published",
+          "type_info": "Bool"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Varchar",
+          "Text",
+          "Bool",
+          "Int4"
+        ]
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false
+      ]
+    }
+  },
+  "b6019471ff1989ef2f0658b0b34e683fdc706751e2bb69043544c9a4d08b5ba0": {
+    "query": "SELECT * FROM posts WHERE id = $1",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "title",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 2,
+          "name": "body",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 3,
+          "name": "published",
+          "type_info": "Bool"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Int4"
+        ]
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false
+      ]
+    }
+  },
+  "f30a0539fe751b463616c272a95fee962bebe2756800519bae5cc7d4350ec896": {
+    "query": "SELECT * FROM posts WHERE published ORDER BY id",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "title",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 2,
+          "name": "body",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 3,
+          "name": "published",
+          "type_info": "Bool"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false
+      ]
+    }
+  },
+  "f79bf547136120da94904ac3faa687a1bc38288ffd790fe09edda13df93c07a6": {
+    "query": "INSERT INTO posts (title, body) VALUES ($1, $2) RETURNING *",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "title",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 2,
+          "name": "body",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 3,
+          "name": "published",
+          "type_info": "Bool"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Varchar",
+          "Text"
+        ]
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false
+      ]
+    }
+  },
+  "f981f19da3798c0a6ca886819b15bdc2fb84d60aa394aa23de463b13e7c1d368": {
+    "query": "DELETE FROM posts WHERE id = $1",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Int4"
+        ]
+      },
+      "nullable": []
+    }
+  }
+}

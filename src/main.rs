@@ -1,21 +1,14 @@
 #[macro_use]
-extern crate diesel;
-#[macro_use]
 extern crate rocket;
-#[macro_use]
-extern crate rocket_contrib;
 
 use color_eyre::eyre::WrapErr;
 
 mod api;
-mod db;
-mod gql;
-mod post;
-mod schema;
-mod utils;
+mod database;
+mod graphql_rocket;
+mod models;
 
 pub use api::rocket;
-pub use utils::*;
 
 #[rocket::main]
 async fn main() -> color_eyre::Result<()> {

@@ -1,19 +1,39 @@
 use rocket::{
     fairing::{AdHoc, Fairing},
+    figment::{self, providers::Serialized, Figment},
     http::Status,
     request::{FromRequest, Outcome, Request},
     trace,
 };
-use rocket_contrib::databases::{diesel::PgConnection, Config};
+use serde::{Deserialize, Serialize};
 use sqlx::{postgres::PgPoolOptions, PgPool};
 
-#[database("legend_db")]
-pub struct LegendDb(PgConnection);
+#[derive(Serialize, Deserialize, PartialEq, Clone, Debug)]
+pub struct Config {
+    pub url: String,
+    pub pool_size: u32,
+    pub timeout: u8,
+}
+
+impl Config {
+    pub fn from(db_name: &str, rocket: &rocket::Rocket) -> Result<Config, figment::Error> {
+        let db_key = format!("databases.{}", db_name);
+        let key = |name: &str| format!("{}.{}", db_key, name);
+
+        Figment::from(rocket.figment())
+            .merge(Serialized::default(
+                &key("pool_size"),
+                rocket.config().workers * 2,
+            ))
+            .merge(Serialized::default(&key("timeout"), 5))
+            .extract_inner::<Self>(&db_key)
+    }
+}
 
 #[derive(Clone, Debug)]
-pub struct LegendDbSqlx(PgPool);
+pub struct LegendDb(PgPool);
 
-impl LegendDbSqlx {
+impl LegendDb {
     pub fn pool(&self) -> &PgPool {
         &self.0
     }
@@ -36,7 +56,7 @@ impl LegendDbSqlx {
                 .await;
 
             match pool {
-                Ok(pool) => Ok(rocket.manage(LegendDbSqlx(pool))),
+                Ok(pool) => Ok(rocket.manage(LegendDb(pool))),
                 Err(e) => {
                     trace::error!(error = %e, "Error connecting to `{}` pool", db);
                     Err(rocket)
@@ -47,7 +67,7 @@ impl LegendDbSqlx {
 }
 
 #[rocket::async_trait]
-impl<'r> FromRequest<'r> for LegendDbSqlx {
+impl<'r> FromRequest<'r> for LegendDb {
     type Error = ();
 
     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, ()> {
